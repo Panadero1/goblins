@@ -1,0 +1,4 @@
+struct Text {
+    text: &str,
+    
+}
