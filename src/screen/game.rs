@@ -9,6 +9,8 @@ pub struct GameScreen {
 impl WindowHandler for GameScreen {
     fn on_draw(&mut self, helper: &mut WindowHelper<()>, graphics: &mut Graphics2D) {
         graphics.clear_screen(Color::RED);
+
+        helper.request_redraw();
     }
     fn on_key_down(&mut self, helper: &mut WindowHelper<()>, virtual_key_code: Option<speedy2d::window::VirtualKeyCode>, scancode: speedy2d::window::KeyScancode) {
         if let Some(virtual_key_code) = virtual_key_code {
