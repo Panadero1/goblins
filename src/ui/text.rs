@@ -1,4 +1,0 @@
-struct Text {
-    text: &str,
-    
-}
