@@ -2,7 +2,7 @@ use std::borrow::BorrowMut;
 
 use speedy2d::{Graphics2D, color::Color, font::{Font, TextAlignment, TextLayout, TextOptions}, shape::Rectangle, window::UserEventSender};
 
-use super::rect::rect_from_dims;
+use super::rect::rect_from_size;
 
 pub struct Button<'a> {
     text: &'a str,
@@ -30,7 +30,7 @@ impl<'a> Button<'a> {
             text,
             font_size,
             on_click: Box::new(on_click),
-            bounds: rect_from_dims(width, height, pos),
+            bounds: rect_from_size(width, height, pos),
             background,
             foreground,
             font,

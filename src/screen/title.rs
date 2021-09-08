@@ -7,7 +7,7 @@ use speedy2d::{Graphics2D, color::Color, font::{Font, TextAlignment, TextLayout,
 
 use crate::{
     screen::RESOLUTION,
-    ui::{button::Button, rect::rect_from_dims},
+    ui::{button::Button, rect::rect_from_size},
 };
 
 use super::{RedirectHandler, Screen, game::GameScreen};
@@ -78,7 +78,7 @@ impl<'a> WindowHandler<String> for TitleScreen<'a> {
         RESOLUTION.0.store(size_pixels.x, Ordering::Relaxed);
         RESOLUTION.1.store(size_pixels.y, Ordering::Relaxed);
         start_button
-            .set_bounds(rect_from_dims(
+            .set_bounds(rect_from_size(
                 start_button.width(),
                 start_button.height(),
                 (
