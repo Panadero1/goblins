@@ -9,12 +9,12 @@ mod ui;
 mod world;
 
 pub fn run() {
+    let res = screen::get_resolution();
     let window: Window<String> = Window::new_with_user_events(
         "Goblins",
         WindowCreationOptions::new_windowed(
             WindowSize::PhysicalPixels(Vector2::new(
-                RESOLUTION.0.load(Ordering::Relaxed),
-                RESOLUTION.1.load(Ordering::Relaxed),
+                res.0, res.1
             )),
             Some(WindowPosition::Center),
         ),

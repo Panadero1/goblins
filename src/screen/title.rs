@@ -3,20 +3,25 @@ use std::{
     sync::atomic::Ordering,
 };
 
-use speedy2d::{Graphics2D, color::Color, font::{Font, TextAlignment, TextLayout, TextOptions}, shape::Rectangle, window::{MouseButton, UserEventSender, VirtualKeyCode, WindowHandler, WindowHelper}};
+use speedy2d::{
+    color::Color,
+    font::{Font, TextAlignment, TextLayout, TextOptions},
+    shape::Rectangle,
+    window::{MouseButton, UserEventSender, VirtualKeyCode, WindowHandler, WindowHelper},
+    Graphics2D,
+};
 
 use crate::{
     screen::RESOLUTION,
     ui::{button::Button, rect::rect_from_size},
 };
 
-use super::{RedirectHandler, Screen, game::GameScreen};
+use super::{game::GameScreen, RedirectHandler, Screen};
 
 pub struct TitleScreen<'a> {
     new_screen: Option<Box<dyn Screen>>,
     mouse_up: bool,
     buttons: HashMap<&'a str, Button<'a>>,
-    mouse_pos: (f32, f32),
     user_event_sender: Option<UserEventSender<String>>,
 }
 
@@ -28,7 +33,9 @@ impl<'a> WindowHandler<String> for TitleScreen<'a> {
 
         graphics.clear_screen(Color::BLUE);
 
-        self.buttons.get("start").unwrap().draw(graphics);
+        for (name, button) in self.buttons.iter() {
+            button.draw(graphics);
+        }
 
         helper.request_redraw();
     }
@@ -40,15 +47,9 @@ impl<'a> WindowHandler<String> for TitleScreen<'a> {
     ) {
         if let Some(virtual_key_code) = virtual_key_code {
             match virtual_key_code {
-                VirtualKeyCode::Space => {
-                    self.new_screen = Some(Box::new(GameScreen::new()));
-                }
                 _ => (),
             }
         }
-    }
-    fn on_mouse_move(&mut self, helper: &mut WindowHelper<String>, position: speedy2d::dimen::Vector2<f32>) {
-        self.mouse_pos = (position.x, position.y);
     }
     fn on_mouse_button_up(
         &mut self,
@@ -61,9 +62,9 @@ impl<'a> WindowHandler<String> for TitleScreen<'a> {
         if self.mouse_up {
             if let MouseButton::Left = button {
                 for (_, button) in self.buttons.iter() {
-                    if button.in_bounds(self.mouse_pos) {
-                        button.click(&self.user_event_sender.as_ref().unwrap());
-                    }
+                    let pos = super::get_mouse_pos();
+                    let pos = (pos.0 as f32, pos.1 as f32);
+                    button.eval_click(pos, &self.user_event_sender.as_ref().unwrap());
                 }
             }
         }
@@ -74,18 +75,21 @@ impl<'a> WindowHandler<String> for TitleScreen<'a> {
         helper: &mut WindowHelper<String>,
         size_pixels: speedy2d::dimen::Vector2<u32>,
     ) {
-        let start_button = self.buttons.get_mut("start").unwrap();
-        RESOLUTION.0.store(size_pixels.x, Ordering::Relaxed);
-        RESOLUTION.1.store(size_pixels.y, Ordering::Relaxed);
-        start_button
-            .set_bounds(rect_from_size(
-                start_button.width(),
-                start_button.height(),
-                (
-                    RESOLUTION.0.load(Ordering::Relaxed) / 2,
-                    RESOLUTION.1.load(Ordering::Relaxed) / 2,
-                ),
+        super::set_resolution(size_pixels.x, size_pixels.y);
+
+        let res = super::get_resolution();
+        let center = (res.0 / 2, res.1 / 2);
+        for (name, button) in self.buttons.iter_mut() {
+            button.set_bounds(rect_from_size(
+                button.width(),
+                button.height(),
+                match *name {
+                    "start" => (center.0, center.1),
+                    "quit" => (center.0, center.1 + 80),
+                    _ => panic!("Not implemented button center scheme!!")
+                },
             ));
+        }
     }
     fn on_start(
         &mut self,
@@ -97,6 +101,9 @@ impl<'a> WindowHandler<String> for TitleScreen<'a> {
         match &user_event[..] {
             "start" => {
                 self.new_screen = Some(Box::new(GameScreen::new()));
+            },
+            "quit" => {
+                helper.terminate_loop();
             }
             _ => (),
         }
@@ -118,22 +125,37 @@ impl<'a> TitleScreen<'a> {
 
         let mut buttons = HashMap::new();
 
-        let res = (RESOLUTION.0.load(Ordering::Relaxed), RESOLUTION.1.load(Ordering::Relaxed));
+        let res = super::get_resolution();
+
+        let center = (res.0 / 2, res.1 / 2);
 
         buttons.insert(
             "start",
             Button::new(
-                "start",
+                "Start",
                 64.0,
                 Box::new(|s: &UserEventSender<String>| {
                     s.send_event(String::from("start")).unwrap();
                 }),
                 180,
                 60,
-                (
-                    res.0 / 2,
-                    res.1 / 2,
-                ),
+                center,
+                Color::WHITE,
+                Color::BLACK,
+                font.clone(),
+            ),
+        );
+        buttons.insert(
+            "quit",
+            Button::new(
+                "Quit",
+                64.0,
+                Box::new(|s: &UserEventSender<String>| {
+                    s.send_event(String::from("quit")).unwrap();
+                }),
+                180,
+                60,
+                (center.0, center.1 + 80),
                 Color::WHITE,
                 Color::BLACK,
                 font,
@@ -144,7 +166,6 @@ impl<'a> TitleScreen<'a> {
             new_screen: None,
             mouse_up: true,
             buttons,
-            mouse_pos: (0.0, 0.0),
             user_event_sender: None,
         }
     }

@@ -6,7 +6,6 @@ use super::{RESOLUTION, RedirectHandler, Screen, title::TitleScreen};
 
 pub struct GameScreen {
     new_screen: Option<Box<dyn Screen>>,
-    mouse_pos: (f32, f32)
 }
 
 impl WindowHandler<String> for GameScreen {
@@ -26,9 +25,6 @@ impl WindowHandler<String> for GameScreen {
             }
         }
     }
-    fn on_mouse_move(&mut self, helper: &mut WindowHelper<String>, position: speedy2d::dimen::Vector2<f32>) {
-        self.mouse_pos = (position.x, position.y);
-    }
 }
 
 impl Screen for GameScreen {
@@ -44,7 +40,6 @@ impl GameScreen {
     pub fn new() -> GameScreen {
         GameScreen {
             new_screen: None,
-            mouse_pos: (0.0, 0.0)
         }
     }
 }

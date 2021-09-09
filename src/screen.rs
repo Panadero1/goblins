@@ -1,4 +1,4 @@
-use std::{rc::Weak, sync::atomic::AtomicU32};
+use std::{rc::Weak, sync::atomic::{AtomicU32, Ordering}};
 
 use speedy2d::{
     dimen::Vector2,
@@ -9,7 +9,21 @@ use speedy2d::{
 pub mod game;
 pub mod title;
 
+pub static MOUSE_POS: (AtomicU32, AtomicU32) = (AtomicU32::new(0), AtomicU32::new(0));
 pub static RESOLUTION: (AtomicU32, AtomicU32) = (AtomicU32::new(640), AtomicU32::new(480));
+
+pub fn get_mouse_pos() -> (u32, u32) {
+    (MOUSE_POS.0.load(Ordering::Relaxed), MOUSE_POS.1.load(Ordering::Relaxed))
+}
+
+pub fn get_resolution() -> (u32, u32) {
+    (RESOLUTION.0.load(Ordering::Relaxed), RESOLUTION.1.load(Ordering::Relaxed))
+}
+
+pub fn set_resolution(new_width: u32, new_height: u32) {
+    RESOLUTION.0.store(new_width, Ordering::Relaxed);
+    RESOLUTION.1.store(new_height, Ordering::Relaxed);
+}
 
 pub trait Screen: WindowHandler<String> {
     fn change_screen(&mut self) -> Option<Box<dyn Screen>>;
@@ -50,6 +64,8 @@ impl WindowHandler<String> for RedirectHandler {
     }
 
     fn on_mouse_move(&mut self, helper: &mut WindowHelper<String>, position: Vector2<f32>) {
+        MOUSE_POS.0.store(position.x as u32, Ordering::Relaxed);
+        MOUSE_POS.1.store(position.y as u32, Ordering::Relaxed);
         self.my_handler.on_mouse_move(helper, position);
     }
 

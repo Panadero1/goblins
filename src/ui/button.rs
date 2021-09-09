@@ -69,4 +69,9 @@ impl<'a> Button<'a> {
         let bottom_right = self.bounds.bottom_right();
         pos.0 >= top_left.x && pos.1 >= top_left.y && pos.0 <= bottom_right.x && pos.1 <= bottom_right.y
     }
+    pub fn eval_click(&self, pos: (f32, f32), sender: &UserEventSender<String>) {
+        if self.in_bounds(pos) {
+            self.click(sender);
+        }
+    }
 }
