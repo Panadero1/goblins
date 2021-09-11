@@ -7,6 +7,7 @@ mod entity;
 mod screen;
 mod ui;
 mod world;
+mod utility;
 
 pub fn run() {
     let res = screen::get_resolution();
