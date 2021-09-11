@@ -8,6 +8,7 @@ use speedy2d::{
 
 pub mod game;
 pub mod title;
+pub mod camera;
 
 pub static MOUSE_POS: (AtomicU32, AtomicU32) = (AtomicU32::new(0), AtomicU32::new(0));
 pub static RESOLUTION: (AtomicU32, AtomicU32) = (AtomicU32::new(640), AtomicU32::new(480));

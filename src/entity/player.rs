@@ -15,6 +15,9 @@ impl Entity for Player {
         ).expect("img path is busted");
         graphics.draw_image(self.pos, &image);
     }
+    fn moove(&mut self, change_pos: (f32, f32)) {
+        self.pos = (self.pos.0 + change_pos.0, self.pos.1 + change_pos.1)
+    }
 }
 
 impl Player {

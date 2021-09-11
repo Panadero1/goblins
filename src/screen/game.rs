@@ -21,7 +21,7 @@ pub struct GameScreen<'a> {
 
 impl<'a> WindowHandler<String> for GameScreen<'a> {
     fn on_draw(&mut self, helper: &mut WindowHelper<String>, graphics: &mut Graphics2D) {
-        graphics.clear_screen(Color::RED);
+        graphics.clear_screen(Color::CYAN);
 
         for (_, entity) in self.entities.iter() {
             entity.draw(graphics);
@@ -39,6 +39,18 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
             match virtual_key_code {
                 VirtualKeyCode::Space => {
                     self.new_screen = Some(Box::new(TitleScreen::new()));
+                }
+                VirtualKeyCode::Up => {
+                    self.entities.get_mut("player").unwrap().moove((0.0, -10.0));
+                }
+                VirtualKeyCode::Down => {
+                    self.entities.get_mut("player").unwrap().moove((0.0, 10.0));
+                }
+                VirtualKeyCode::Right => {
+                    self.entities.get_mut("player").unwrap().moove((10.0, 0.0));
+                }
+                VirtualKeyCode::Left => {
+                    self.entities.get_mut("player").unwrap().moove((-10.0, 0.0));
                 }
                 _ => (),
             }
