@@ -53,6 +53,18 @@ impl<'a> Animation<'a> {
             None => Err(AnimationSelectError::NotFound),
         }
     }
+    pub fn intercept(&mut self, anim: &str) -> Result<(), AnimationSelectError> {
+        match self.frames.get(anim) {
+            Some(frames) => {
+                if Some(frames) == self.frame_loop.as_ref() {
+                    return Err(AnimationSelectError::AlreadyPlaying)
+                }
+                self.frame_loop = Some(frames.clone());
+                Ok(())
+            }
+            None => Err(AnimationSelectError::NotFound),
+        }
+    }
     pub fn deselect(&mut self) {
         self.frame_loop = None;
     }

@@ -46,13 +46,21 @@ impl<'a> Entity for Player<'a> {
         };
         self.pos = (self.pos.x + change_pos.0, self.pos.y + change_pos.1).into();
     }
-    fn set_anim(&mut self, name: &str) -> Result<(), AnimationSelectError> {
-        let name = match name {
+    fn set_anim(&mut self, anim_name: &str) -> Result<(), AnimationSelectError> {
+        let anim_name = match anim_name {
             "move" => match self.direction { Direction::Left => "move left", Direction::Right => "move right"}
             "attack" => match self.direction { Direction::Left => "attack left", Direction::Right => "attack right"},
             _ => return Err(AnimationSelectError::NotFound)
         };
-        self.anim.select(name)
+        self.anim.select(anim_name)
+    }
+    fn intercept_anim(&mut self, anim_name: &str) -> Result<(), AnimationSelectError> {
+        let anim_name = match anim_name {
+            "move" => match self.direction { Direction::Left => "move left", Direction::Right => "move right"}
+            "attack" => match self.direction { Direction::Left => "attack left", Direction::Right => "attack right"},
+            _ => return Err(AnimationSelectError::NotFound)
+        };
+        self.anim.intercept(anim_name)
     }
     fn remove_anim(&mut self) {
         self.anim.deselect();

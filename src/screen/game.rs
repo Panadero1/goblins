@@ -70,7 +70,7 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
                 else { (0.0, 0.0) }
             );
             if let Err(AnimationSelectError::NotFound) =
-                player.set_anim(if check_input(current_input, Input::ATTACK) {
+                player.intercept_anim(if check_input(current_input, Input::ATTACK) {
                     "attack"
                 } else {
                     "move"
