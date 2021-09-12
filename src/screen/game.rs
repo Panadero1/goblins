@@ -4,6 +4,7 @@ use std::{
     sync::atomic::Ordering,
 };
 
+use bitflags::bitflags;
 use speedy2d::{
     color::Color,
     image::{ImageDataType, ImageFileFormat, ImageSmoothingMode},
@@ -11,14 +12,25 @@ use speedy2d::{
     Graphics2D,
 };
 
-use crate::entity::{player::Player, Entity};
+use crate::{entity::{player::Player, Entity}, utility::animation::AnimationSelectError};
 
 use super::{title::TitleScreen, RedirectHandler, Screen, RESOLUTION};
+
+bitflags! {
+    struct Input: u8 {
+        const LEFT   = 0b00000001;
+        const RIGHT  = 0b00000010;
+        const UP     = 0b00000100;
+        const DOWN   = 0b00001000;
+        const ATTACK = 0b00010000;
+    }
+}
 
 pub struct GameScreen<'a> {
     new_screen: Option<Box<dyn Screen>>,
     entities: HashMap<&'a str, Box<dyn Entity>>,
-    can_anim: [bool; 4], // up, down, left, right
+    current_input: Input
+    , // up, down, left, right
 }
 
 impl<'a> WindowHandler<String> for GameScreen<'a> {
@@ -61,30 +73,46 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
                 VirtualKeyCode::Up => {
                     if let Some(player) = player {
                         player.moove((0.0, -10.0));
+                        if self.current_input & Input::UP != Input::UP {
+                            // if let Err(AnimationSelectError::NotFound) = player.set_anim("up") {
+                            //     panic!("No animation found");
+                            // }
+                        }
                     }
+                    self.current_input |= Input::UP;
                 }
                 VirtualKeyCode::Down => {
                     if let Some(player) = player {
                         player.moove((0.0, 10.0));
+                        if self.current_input & Input::DOWN != Input::DOWN {
+                            // if let Err(AnimationSelectError::NotFound) = player.set_anim("down") {
+                            //     panic!("No animation found");
+                            // }
+                        }
                     }
+                    self.current_input |= Input::DOWN;
                 }
                 VirtualKeyCode::Right => {
                     if let Some(player) = player {
                         player.moove((10.0, 0.0));
-                        if self.can_anim[3] {
-                            player.set_anim("right").unwrap();
-                            self.can_anim = [true, true, true, false];
+                        if self.current_input & Input::RIGHT != Input::RIGHT {
+                            if let Err(AnimationSelectError::NotFound) = player.set_anim("right") {
+                                panic!("No animation found");
+                            }
                         }
                     }
+                    self.current_input |= Input::RIGHT;
                 }
                 VirtualKeyCode::Left => {
                     if let Some(player) = player {
                         player.moove((-10.0, 0.0));
-                        if self.can_anim[2] {
-                            player.set_anim("left").unwrap();
-                            self.can_anim = [true, true, false, true];
+                        if self.current_input & Input::LEFT != Input::LEFT {
+                            if let Err(AnimationSelectError::NotFound) = player.set_anim("left") {
+                                panic!("No animation found");
+                            }
                         }
                     }
+                    self.current_input |= Input::LEFT;
                 }
                 _ => (),
             }
@@ -96,16 +124,22 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
             let player = self.entities.get_mut("player");
             match virtual_key_code {
                 VirtualKeyCode::Right => {
+                    self.current_input &= !Input::RIGHT;
                     if let Some(player) = player {
                         player.remove_anim();
-                        self.can_anim = [true, true, true, true];
                     }
-                }
+                },
                 VirtualKeyCode::Left => {
+                    self.current_input &= !Input::LEFT;
                     if let Some(player) = player {
                         player.remove_anim();
-                        self.can_anim = [true, true, true, true];
                     }
+                },
+                VirtualKeyCode::Up => {
+                    self.current_input &= !Input::UP;
+                }
+                VirtualKeyCode::Down => {
+                    self.current_input &= !Input::DOWN;
                 }
                 _ => (),
             }
@@ -127,7 +161,7 @@ impl<'a> GameScreen<'a> {
         GameScreen {
             new_screen: None,
             entities: HashMap::new(),
-            can_anim: [true; 4],
+            current_input: Input { bits: 0 },
         }
     }
 }

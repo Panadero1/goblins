@@ -1,39 +1,52 @@
-use std::{ops::{Add, Mul, Sub}};
+use std::{ops::{Add, AddAssign, Mul, Sub, SubAssign}};
 
+#[derive(Clone, Copy)]
 pub struct GamePos {
-    pos: (f32, f32)
+    pub x: f32,
+    pub y: f32,
 }
 
 impl Add for GamePos {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        (self.pos.0 + rhs.pos.0, self.pos.1 + rhs.pos.1).into()
+        (self.x + rhs.x, self.y + rhs.y).into()
+    }
+}
+impl AddAssign for GamePos {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = (self.x + rhs.x, self.y + rhs.y).into();
     }
 }
 impl Sub for GamePos {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        (self.pos.0 - rhs.pos.0, self.pos.1 - rhs.pos.1).into()
+        (self.x - rhs.x, self.y - rhs.y).into()
+    }
+}
+impl SubAssign for GamePos {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = (self.x - rhs.x, self.y - rhs.y).into();
     }
 }
 impl Mul<f32> for GamePos {
     type Output = GamePos;
 
     fn mul(self, rhs: f32) -> Self::Output {
-        (self.pos.0 * rhs, self.pos.1 * rhs).into()
+        (self.x * rhs, self.y * rhs).into()
     }
 }
 impl Into<(f32, f32)> for GamePos {
     fn into(self) -> (f32, f32) {
-        self.pos
+        (self.x, self.y)
     }
 }
 impl From<(f32, f32)> for GamePos {
     fn from(pos: (f32, f32)) -> Self {
         GamePos {
-            pos
+            x: pos.0,
+            y: pos.1
         }
     }
 }

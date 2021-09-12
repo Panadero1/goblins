@@ -1,14 +1,15 @@
+use crate::world::space::GamePos;
+
 pub struct Camera {
-    pos: (f32, f32),
+    pos: GamePos,
 }
 impl Camera {
     pub fn new(pos: (f32, f32)) -> Camera {
         Camera {
-            pos
+            pos: pos.into()
         }
     }
     pub fn moove(&mut self, change_pos: (f32, f32)) {
-        self.pos.0 += change_pos.0;
-        self.pos.1 += change_pos.1;
+        self.pos += (change_pos.0, change_pos.1).into();
     }
 }

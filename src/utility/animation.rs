@@ -7,6 +7,11 @@ use speedy2d::{
     Graphics2D,
 };
 
+pub enum AnimationSelectError {
+    AlreadyPlaying,
+    NotFound,
+}
+
 pub struct Animation<'a> {
     src: ImageHandle,
     frame_size: (u16, u16),
@@ -34,14 +39,17 @@ impl<'a> Animation<'a> {
             iter_speed_ms,
         }
     }
-    pub fn select(&mut self, anim: &str) -> Result<(), ()> {
-        self.start = Instant::now();
+    pub fn select(&mut self, anim: &str) -> Result<(), AnimationSelectError> {
         match self.frames.get(anim) {
             Some(frames) => {
+                if Some(frames) == self.frame_loop.as_ref() {
+                    return Err(AnimationSelectError::AlreadyPlaying)
+                }
+                self.start = Instant::now();
                 self.frame_loop = Some(frames.clone());
                 Ok(())
             }
-            None => Err(()),
+            None => Err(AnimationSelectError::NotFound),
         }
     }
     pub fn deselect(&mut self) {
