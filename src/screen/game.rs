@@ -1,8 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    rc::Weak,
-    sync::atomic::Ordering,
-};
+use std::{collections::{HashMap, HashSet}, rc::Weak, sync::atomic::Ordering, time::Instant};
 
 use speedy2d::{
     color::Color,
@@ -18,7 +14,7 @@ use super::{title::TitleScreen, RedirectHandler, Screen, RESOLUTION};
 pub struct GameScreen<'a> {
     new_screen: Option<Box<dyn Screen>>,
     entities: HashMap<&'a str, Box<dyn Entity>>,
-    can_anim: [bool; 4], // up, down, left, right
+    can_anim: [bool; 4], // move, fight, etc, etc
 }
 
 impl<'a> WindowHandler<String> for GameScreen<'a> {
@@ -29,9 +25,9 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
                 Box::new(Player::new(
                     graphics
                         .create_image_from_file_path(
-                            Some(ImageFileFormat::JPEG),
+                            Some(ImageFileFormat::PNG),
                             ImageSmoothingMode::NearestNeighbor,
-                            ".\\assets\\img\\test.jpg",
+                            ".\\assets\\img\\knight.png",
                         )
                         .unwrap(),
                 )),
@@ -71,21 +67,29 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
                 VirtualKeyCode::Right => {
                     if let Some(player) = player {
                         player.moove((10.0, 0.0));
-                        if self.can_anim[3] {
-                            player.set_anim("right").unwrap();
-                            self.can_anim = [true, true, true, false];
+                        if self.can_anim[0] {
+                            player.set_anim("move").unwrap();
+                            self.can_anim = [false, true, true, true];
                         }
                     }
                 }
                 VirtualKeyCode::Left => {
                     if let Some(player) = player {
                         player.moove((-10.0, 0.0));
-                        if self.can_anim[2] {
-                            player.set_anim("left").unwrap();
-                            self.can_anim = [true, true, false, true];
+                        if self.can_anim[0] {
+                            player.set_anim("move").unwrap();
+                            self.can_anim = [false, true, true, true];
                         }
                     }
-                }
+                },
+                VirtualKeyCode::Space => {
+                    if let Some(player) = player {
+                        if self.can_anim[1] {
+                            player.set_anim("attack").unwrap();
+                            self.can_anim = [true, false, false, false];
+                        }
+                    }
+                },
                 _ => (),
             }
         }
@@ -100,13 +104,19 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
                         player.remove_anim();
                         self.can_anim = [true, true, true, true];
                     }
-                }
+                },
                 VirtualKeyCode::Left => {
                     if let Some(player) = player {
                         player.remove_anim();
                         self.can_anim = [true, true, true, true];
                     }
-                }
+                },
+                VirtualKeyCode::Space => {
+                    if let Some(player) = player {
+                        player.remove_anim();
+                        self.can_anim = [true, true, true, true];
+                    }
+                },
                 _ => (),
             }
         }
