@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cmp::Ordering, collections::HashMap};
 
 use speedy2d::{
     color::Color,
@@ -10,11 +10,17 @@ use crate::{utility::animation::{Animation, AnimationSelectError}, world::space:
 
 use super::Entity;
 
+#[derive(Clone, Copy)]
+enum Direction {
+    Left,
+    Right,
+}
+
 pub struct Player<'a> {
     pos: GamePos,
     anim: Animation<'a>,
     screen_size: (f32, f32),
-    direction_left: bool,
+    direction: Direction,
 }
 
 impl<'a> Entity for Player<'a> {
@@ -32,14 +38,19 @@ impl<'a> Entity for Player<'a> {
         );
     }
     fn moove(&mut self, change_pos: (f32, f32)) {
-        self.direction_left = change_pos.0 < 0.0;
-        self.pos = (self.pos.0 + change_pos.0, self.pos.1 + change_pos.1);
+        self.direction = match change_pos.0.partial_cmp(&0.0) {
+            Some(Ordering::Equal) => self.direction,
+            Some(Ordering::Greater) => Direction::Right,
+            Some(Ordering::Less) => Direction::Left,
+            None => self.direction,
+        };
+        self.pos = (self.pos.x + change_pos.0, self.pos.y + change_pos.1).into();
     }
-    fn set_anim(&mut self, name: &str) -> Result<(), ()> {
+    fn set_anim(&mut self, name: &str) -> Result<(), AnimationSelectError> {
         let name = match name {
-            "move" => if self.direction_left {"move left"} else {"move right"},
-            "attack" => if self.direction_left {"attack left"} else {"attack right"},
-            _ => return Err(())
+            "move" => match self.direction { Direction::Left => "move left", Direction::Right => "move right"}
+            "attack" => match self.direction { Direction::Left => "attack left", Direction::Right => "attack right"},
+            _ => return Err(AnimationSelectError::NotFound)
         };
         self.anim.select(name)
     }
@@ -62,7 +73,7 @@ impl<'a> Player<'a> {
             pos: (300.0, 300.0).into(),
             anim,
             screen_size: (80.0, 80.0),
-            direction_left: true,
+            direction: Direction::Right,
         }
     }
 }

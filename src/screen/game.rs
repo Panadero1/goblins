@@ -1,4 +1,10 @@
-use std::{collections::{HashMap, HashSet}, rc::Weak, sync::atomic::Ordering, time::Instant};
+use core::panic;
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Weak,
+    sync::atomic::Ordering,
+    time::Instant,
+};
 
 use bitflags::bitflags;
 use speedy2d::{
@@ -8,12 +14,16 @@ use speedy2d::{
     Graphics2D,
 };
 
-use crate::{entity::{player::Player, Entity}, utility::animation::AnimationSelectError};
+use crate::{
+    entity::{player::Player, Entity},
+    utility::animation::AnimationSelectError,
+};
 
 use super::{title::TitleScreen, RedirectHandler, Screen, RESOLUTION};
 
 bitflags! {
     struct Input: u8 {
+        const NONE   = 0b00000000;
         const LEFT   = 0b00000001;
         const RIGHT  = 0b00000010;
         const UP     = 0b00000100;
@@ -45,6 +55,31 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
             );
         }
 
+        let current_input = self.current_input;
+
+        let player = self.entities.get_mut("player").unwrap();
+
+        if current_input.is_empty() {
+            player.remove_anim();
+        } else {
+            player.moove(
+                if check_input(current_input, Input::LEFT) { (-10.0, 0.0)}
+                else if check_input(current_input, Input::RIGHT) { (10.0, 0.0) }
+                else if check_input(current_input, Input::DOWN) { (0.0, 10.0) }
+                else if check_input(current_input, Input::UP) { (0.0, -10.0) }
+                else { (0.0, 0.0) }
+            );
+            if let Err(AnimationSelectError::NotFound) =
+                player.set_anim(if check_input(current_input, Input::ATTACK) {
+                    "attack"
+                } else {
+                    "move"
+                })
+            {
+                panic!("No animation found");
+            }
+        }
+
         graphics.clear_screen(Color::CYAN);
 
         for (_, entity) in self.entities.iter_mut() {
@@ -65,56 +100,25 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
                 VirtualKeyCode::Escape => {
                     self.new_screen = Some(Box::new(TitleScreen::new()));
                 }
-                VirtualKeyCode::Up => {
-                    if let Some(player) = player {
-                        player.moove((0.0, -10.0));
-                        if self.current_input & Input::UP != Input::UP {
-                            // if let Err(AnimationSelectError::NotFound) = player.set_anim("up") {
-                            //     panic!("No animation found");
-                            // }
-                        }
+                _ => {
+                    self.current_input |= match virtual_key_code {
+                        VirtualKeyCode::Up => Input::UP,
+                        VirtualKeyCode::Down => Input::DOWN,
+                        VirtualKeyCode::Right => Input::RIGHT,
+                        VirtualKeyCode::Left => Input::LEFT,
+                        VirtualKeyCode::Space => Input::ATTACK,
+                        _ => Input::NONE,
                     }
-                    self.current_input |= Input::UP;
                 }
-                VirtualKeyCode::Down => {
-                    if let Some(player) = player {
-                        player.moove((0.0, 10.0));
-                        if self.current_input & Input::DOWN != Input::DOWN {
-                            // if let Err(AnimationSelectError::NotFound) = player.set_anim("down") {
-                            //     panic!("No animation found");
-                            // }
-                        }
-                    }
-                    self.current_input |= Input::DOWN;
-                }
-                VirtualKeyCode::Right => {
-                    if let Some(player) = player {
-                        player.moove((10.0, 0.0));
-                        if self.current_input & Input::RIGHT != Input::RIGHT {
-                            if let Err(AnimationSelectError::NotFound) = player.set_anim("right") {
-                                panic!("No animation found");
-                            }
-                        }
-                    }
-                    self.current_input |= Input::RIGHT;
-                }
-                VirtualKeyCode::Left => {
-                    if let Some(player) = player {
-                        player.moove((-10.0, 0.0));
-                        if self.current_input & Input::LEFT != Input::LEFT {
-                            if let Err(AnimationSelectError::NotFound) = player.set_anim("left") {
-                                panic!("No animation found");
-                            }
-                        }
-                    }
-                    self.current_input |= Input::LEFT;
-                }
-                _ => (),
             }
         }
     }
-    fn on_key_up(&mut self, helper: &mut WindowHelper<String>, virtual_key_code: Option<VirtualKeyCode>, scancode: speedy2d::window::KeyScancode) {
-        
+    fn on_key_up(
+        &mut self,
+        helper: &mut WindowHelper<String>,
+        virtual_key_code: Option<VirtualKeyCode>,
+        scancode: speedy2d::window::KeyScancode,
+    ) {
         if let Some(virtual_key_code) = virtual_key_code {
             let player = self.entities.get_mut("player");
             match virtual_key_code {
@@ -123,18 +127,24 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
                     if let Some(player) = player {
                         player.remove_anim();
                     }
-                },
+                }
                 VirtualKeyCode::Left => {
                     self.current_input &= !Input::LEFT;
                     if let Some(player) = player {
                         player.remove_anim();
                     }
-                },
+                }
                 VirtualKeyCode::Up => {
                     self.current_input &= !Input::UP;
                 }
                 VirtualKeyCode::Down => {
                     self.current_input &= !Input::DOWN;
+                }
+                VirtualKeyCode::Space => {
+                    self.current_input &= !Input::ATTACK;
+                    if let Some(player) = player {
+                        player.remove_anim();
+                    }
                 }
                 _ => (),
             }
@@ -159,4 +169,8 @@ impl<'a> GameScreen<'a> {
             current_input: Input { bits: 0 },
         }
     }
+}
+
+fn check_input(flag: Input, comp_flag: Input) -> bool {
+    flag & comp_flag == comp_flag
 }

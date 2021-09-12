@@ -7,6 +7,7 @@ use speedy2d::{
     Graphics2D,
 };
 
+#[derive(Debug)]
 pub enum AnimationSelectError {
     AlreadyPlaying,
     NotFound,
