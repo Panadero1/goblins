@@ -577,6 +577,7 @@ dependencies = [
 name = "goblins"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "speedy2d",
 ]
 
