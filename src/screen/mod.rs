@@ -11,7 +11,7 @@ pub mod title;
 pub mod camera;
 
 pub static MOUSE_POS: (AtomicU32, AtomicU32) = (AtomicU32::new(0), AtomicU32::new(0));
-pub static RESOLUTION: (AtomicU32, AtomicU32) = (AtomicU32::new(640), AtomicU32::new(480));
+pub static RESOLUTION: (AtomicU32, AtomicU32) = (AtomicU32::new(500), AtomicU32::new(400));
 
 pub fn get_mouse_pos() -> (u32, u32) {
     (MOUSE_POS.0.load(Ordering::Relaxed), MOUSE_POS.1.load(Ordering::Relaxed))
@@ -47,6 +47,7 @@ impl WindowHandler<String> for RedirectHandler {
     }
 
     fn on_resize(&mut self, helper: &mut WindowHelper<String>, size_pixels: Vector2<u32>) {
+        set_resolution(size_pixels.x, size_pixels.y);
         self.my_handler.on_resize(helper, size_pixels);
     }
 

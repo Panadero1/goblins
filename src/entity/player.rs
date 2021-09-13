@@ -6,7 +6,11 @@ use speedy2d::{
     shape::Rectangle,
 };
 
-use crate::{utility::animation::{Animation, AnimationSelectError}, world::space::GamePos};
+use crate::{
+    screen::camera::Camera,
+    utility::animation::{Animation, AnimationSelectError},
+    world::space::GamePos,
+};
 
 use super::Entity;
 
@@ -19,19 +23,18 @@ enum Direction {
 pub struct Player<'a> {
     pos: GamePos,
     anim: Animation<'a>,
-    screen_size: (f32, f32),
+    game_size: (f32, f32),
     direction: Direction,
 }
 
 impl<'a> Entity for Player<'a> {
-    fn draw(&mut self, graphics: &mut speedy2d::Graphics2D) {
+    fn draw(&mut self, graphics: &mut speedy2d::Graphics2D, camera: &Camera) {
         self.anim.draw(
             graphics,
             Rectangle::from_tuples(
-                self.pos.into(),
-                (
-                    self.pos.x + self.screen_size.0,
-                    self.pos.y + self.screen_size.1,
+                camera.game_to_pix(self.pos),
+                camera.game_to_pix(
+                    (self.pos.x + self.game_size.0, self.pos.y + self.game_size.1).into(),
                 ),
             ),
             Color::WHITE,
@@ -48,17 +51,29 @@ impl<'a> Entity for Player<'a> {
     }
     fn set_anim(&mut self, anim_name: &str) -> Result<(), AnimationSelectError> {
         let anim_name = match anim_name {
-            "move" => match self.direction { Direction::Left => "move left", Direction::Right => "move right"}
-            "attack" => match self.direction { Direction::Left => "attack left", Direction::Right => "attack right"},
-            _ => return Err(AnimationSelectError::NotFound)
+            "move" => match self.direction {
+                Direction::Left => "move left",
+                Direction::Right => "move right",
+            },
+            "attack" => match self.direction {
+                Direction::Left => "attack left",
+                Direction::Right => "attack right",
+            },
+            _ => return Err(AnimationSelectError::NotFound),
         };
         self.anim.select(anim_name)
     }
     fn intercept_anim(&mut self, anim_name: &str) -> Result<(), AnimationSelectError> {
         let anim_name = match anim_name {
-            "move" => match self.direction { Direction::Left => "move left", Direction::Right => "move right"}
-            "attack" => match self.direction { Direction::Left => "attack left", Direction::Right => "attack right"},
-            _ => return Err(AnimationSelectError::NotFound)
+            "move" => match self.direction {
+                Direction::Left => "move left",
+                Direction::Right => "move right",
+            },
+            "attack" => match self.direction {
+                Direction::Left => "attack left",
+                Direction::Right => "attack right",
+            },
+            _ => return Err(AnimationSelectError::NotFound),
         };
         self.anim.intercept(anim_name)
     }
@@ -71,16 +86,22 @@ impl<'a> Player<'a> {
     pub fn new(src: ImageHandle) -> Player<'a> {
         let mut frames: HashMap<&'a str, (bool, Vec<(u16, u16)>)> = HashMap::new();
 
-        frames.insert("attack right", (true, vec![(0, 1), (1, 1), (2, 1), (3, 1), (4, 1)]));
-        frames.insert("attack left", (true, vec![(0, 2), (1, 2), (2, 2), (3, 2), (4, 2)]));
+        frames.insert(
+            "attack right",
+            (true, vec![(0, 1), (1, 1), (2, 1), (3, 1), (4, 1)]),
+        );
+        frames.insert(
+            "attack left",
+            (true, vec![(0, 2), (1, 2), (2, 2), (3, 2), (4, 2)]),
+        );
         frames.insert("move left", (true, vec![(3, 0), (4, 0)]));
         frames.insert("move right", (true, vec![(1, 0), (2, 0)]));
 
         let anim = Animation::new(src, (8, 10), frames, (0, 0), 100);
         Player {
-            pos: (300.0, 300.0).into(),
+            pos: (0.0, 0.0).into(),
             anim,
-            screen_size: (80.0, 80.0),
+            game_size: (8.0, 10.0),
             direction: Direction::Right,
         }
     }

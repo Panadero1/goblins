@@ -19,7 +19,9 @@ use crate::{
     utility::animation::AnimationSelectError,
 };
 
-use super::{title::TitleScreen, RedirectHandler, Screen, RESOLUTION};
+use super::{RESOLUTION, RedirectHandler, Screen, camera::Camera, title::TitleScreen};
+
+const SPEED: f32 = 2.0;
 
 bitflags! {
     struct Input: u8 {
@@ -36,6 +38,7 @@ pub struct GameScreen<'a> {
     new_screen: Option<Box<dyn Screen>>,
     entities: HashMap<&'a str, Box<dyn Entity>>,
     current_input: Input,
+    camera: Camera,
 }
 
 impl<'a> WindowHandler<String> for GameScreen<'a> {
@@ -63,10 +66,10 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
             player.remove_anim();
         } else {
             player.moove(
-                if check_input(current_input, Input::LEFT) { (-10.0, 0.0)}
-                else if check_input(current_input, Input::RIGHT) { (10.0, 0.0) }
-                else if check_input(current_input, Input::DOWN) { (0.0, 10.0) }
-                else if check_input(current_input, Input::UP) { (0.0, -10.0) }
+                if check_input(current_input, Input::LEFT) { (-SPEED, 0.0)}
+                else if check_input(current_input, Input::RIGHT) { (SPEED, 0.0) }
+                else if check_input(current_input, Input::DOWN) { (0.0, SPEED) }
+                else if check_input(current_input, Input::UP) { (0.0, -SPEED) }
                 else { (0.0, 0.0) }
             );
             if let Err(AnimationSelectError::NotFound) =
@@ -83,7 +86,7 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
         graphics.clear_screen(Color::CYAN);
 
         for (_, entity) in self.entities.iter_mut() {
-            entity.draw(graphics);
+            entity.draw(graphics, &self.camera);
         }
 
         helper.request_redraw();
@@ -150,6 +153,10 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
             }
         }
     }
+    fn on_resize(&mut self, helper: &mut WindowHelper<String>, size_pixels: speedy2d::dimen::Vector2<u32>) {
+        self.camera.width = size_pixels.x as f32 / 10.0;
+        self.camera.height = size_pixels.y as f32 / 10.0;
+    }
 }
 
 impl<'a> Screen for GameScreen<'a> {
@@ -167,6 +174,7 @@ impl<'a> GameScreen<'a> {
             new_screen: None,
             entities: HashMap::new(),
             current_input: Input { bits: 0 },
+            camera: Camera::new((0.0, 0.0).into(), 40.0, 50.0),
         }
     }
 }
