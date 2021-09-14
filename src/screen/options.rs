@@ -16,16 +16,16 @@ use crate::{
     ui::{button::Button, rect::rect_from_size},
 };
 
-use super::{RedirectHandler, Screen, game::GameScreen, options::OptionsScreen};
+use super::{RedirectHandler, Screen, game::GameScreen, title::TitleScreen};
 
-pub struct TitleScreen<'a> {
+pub struct OptionsScreen<'a> {
     new_screen: Option<Box<dyn Screen>>,
     mouse_up: bool,
     buttons: HashMap<&'a str, Button<'a>>,
     user_event_sender: Option<UserEventSender<String>>,
 }
 
-impl<'a> WindowHandler<String> for TitleScreen<'a> {
+impl<'a> WindowHandler<String> for OptionsScreen<'a> {
     fn on_draw(&mut self, helper: &mut WindowHelper<String>, graphics: &mut Graphics2D) {
         if self.user_event_sender.is_none() {
             self.user_event_sender = Some(helper.create_user_event_sender());
@@ -84,9 +84,7 @@ impl<'a> WindowHandler<String> for TitleScreen<'a> {
                 button.width(),
                 button.height(),
                 match *name {
-                    "start" => (center.0, center.1),
-                    "options" => (center.0, center.1 + 80),
-                    "quit" => (center.0, center.1 + 160),
+                    "back" => (center.0, center.1 + 160),
                     _ => panic!("Not implemented button center scheme!!")
                 },
             ));
@@ -100,21 +98,15 @@ impl<'a> WindowHandler<String> for TitleScreen<'a> {
     }
     fn on_user_event(&mut self, helper: &mut WindowHelper<String>, user_event: String) {
         match &user_event[..] {
-            "start" => {
-                self.new_screen = Some(Box::new(GameScreen::new()));
+            "back" => {
+                self.new_screen = Some(Box::new(TitleScreen::new()));
             },
-            "options" => {
-                self.new_screen = Some(Box::new(OptionsScreen::new()));
-            },
-            "quit" => {
-                helper.terminate_loop();
-            }
             _ => (),
         }
     }
 }
 
-impl<'a> Screen for TitleScreen<'a> {
+impl<'a> Screen for OptionsScreen<'a> {
     fn change_screen(&mut self) -> Option<Box<dyn Screen>> {
         if self.new_screen.is_some() {
             return self.new_screen.take();
@@ -123,8 +115,8 @@ impl<'a> Screen for TitleScreen<'a> {
     }
 }
 
-impl<'a> TitleScreen<'a> {
-    pub fn new() -> TitleScreen<'a> {
+impl<'a> OptionsScreen<'a> {
+    pub fn new() -> OptionsScreen<'a> {
         let font = Font::new(include_bytes!("../../assets/font/Cabal-w5j3.ttf")).unwrap();
 
         let mut buttons = HashMap::new();
@@ -132,48 +124,15 @@ impl<'a> TitleScreen<'a> {
         let res = super::get_resolution();
 
         let center = (res.0 / 2, res.1 / 2);
-
         buttons.insert(
-            "start",
+            "back",
             Button::new(
-                "Start",
+                "Back",
                 64.0,
                 Box::new(|s: &UserEventSender<String>| {
-                    s.send_event(String::from("start")).unwrap();
+                    s.send_event(String::from("back")).unwrap();
                 }),
-                250,
-                60,
-                center,
-                Color::WHITE,
-                Color::BLACK,
-                font.clone(),
-            ),
-        );
-        buttons.insert(
-            "options",
-            Button::new(
-                "Options",
-                64.0,
-                Box::new(|s: &UserEventSender<String>| {
-                    s.send_event(String::from("options")).unwrap();
-                }),
-                250,
-                60,
-                (center.0, center.1 + 80),
-                Color::WHITE,
-                Color::BLACK,
-                font.clone(),
-            ),
-        );
-        buttons.insert(
-            "quit",
-            Button::new(
-                "Quit",
-                64.0,
-                Box::new(|s: &UserEventSender<String>| {
-                    s.send_event(String::from("quit")).unwrap();
-                }),
-                250,
+                180,
                 60,
                 (center.0, center.1 + 160),
                 Color::WHITE,
@@ -182,7 +141,7 @@ impl<'a> TitleScreen<'a> {
             ),
         );
 
-        TitleScreen {
+        OptionsScreen {
             new_screen: None,
             mouse_up: true,
             buttons,
