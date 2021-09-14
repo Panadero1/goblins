@@ -7,6 +7,7 @@ use std::{
 };
 
 use bitflags::bitflags;
+use rand::Rng;
 use speedy2d::{
     color::Color,
     image::{ImageDataType, ImageFileFormat, ImageSmoothingMode},
@@ -14,12 +15,9 @@ use speedy2d::{
     Graphics2D,
 };
 
-use crate::{
-    entity::{player::Player, Entity},
-    utility::animation::AnimationSelectError,
-};
+use crate::{entity::{self, Entity, player::Player, tile::Tile}, utility::{animation::AnimationSelectError, serial_namer::SerialNamer}};
 
-use super::{RESOLUTION, RedirectHandler, Screen, camera::Camera, title::TitleScreen};
+use super::{camera::Camera, title::TitleScreen, RedirectHandler, Screen, RESOLUTION};
 
 const SPEED: f32 = 2.0;
 
@@ -34,61 +32,66 @@ bitflags! {
     }
 }
 
-pub struct GameScreen<'a> {
+pub struct GameScreen {
     new_screen: Option<Box<dyn Screen>>,
-    entities: HashMap<&'a str, Box<dyn Entity>>,
+    background: Option<HashMap<String, Box<dyn Entity>>>,
+    entities: Option<HashMap<String, Box<dyn Entity>>>,
     current_input: Input,
     camera: Camera,
+    namer: SerialNamer,
 }
 
-impl<'a> WindowHandler<String> for GameScreen<'a> {
+impl WindowHandler<String> for GameScreen {
     fn on_draw(&mut self, helper: &mut WindowHelper<String>, graphics: &mut Graphics2D) {
-        if self.entities.get("player").is_none() {
-            self.entities.insert(
-                "player",
-                Box::new(Player::new(
-                    graphics
-                        .create_image_from_file_path(
-                            Some(ImageFileFormat::PNG),
-                            ImageSmoothingMode::NearestNeighbor,
-                            ".\\assets\\img\\knight.png",
-                        )
-                        .unwrap(),
-                )),
-            );
-        }
-
-        let current_input = self.current_input;
-
-        let player = self.entities.get_mut("player").unwrap();
-
-        if current_input.is_empty() {
-            player.remove_anim();
-        } else {
-            player.moove(
-                if check_input(current_input, Input::LEFT) { (-SPEED, 0.0)}
-                else if check_input(current_input, Input::RIGHT) { (SPEED, 0.0) }
-                else if check_input(current_input, Input::DOWN) { (0.0, SPEED) }
-                else if check_input(current_input, Input::UP) { (0.0, -SPEED) }
-                else { (0.0, 0.0) }
-            );
-            if let Err(AnimationSelectError::NotFound) =
-                player.intercept_anim(if check_input(current_input, Input::ATTACK) {
-                    "attack"
-                } else {
-                    "move"
-                })
-            {
-                panic!("No animation found");
-            }
-        }
-
         graphics.clear_screen(Color::CYAN);
-
-        for (_, entity) in self.entities.iter_mut() {
-            entity.draw(graphics, &self.camera);
+        if self.entities.is_none() {
+            self.init_sprites(graphics);
         }
 
+        if let Some(entities) = &mut self.entities {
+            if let Some(background) = &mut self.background {
+                let current_input = self.current_input;
+    
+                let player = entities.get_mut("player").unwrap();
+    
+                if current_input.is_empty() {
+                    player.remove_anim();
+                } else {
+                    let mvmt = if check_input(current_input, Input::LEFT) {
+                        (-SPEED, 0.0)
+                    } else if check_input(current_input, Input::RIGHT) {
+                        (SPEED, 0.0)
+                    } else if check_input(current_input, Input::DOWN) {
+                        (0.0, SPEED)
+                    } else if check_input(current_input, Input::UP) {
+                        (0.0, -SPEED)
+                    } else {
+                        (0.0, 0.0)
+                    };
+                    player.moove(mvmt);
+                    self.camera.moove(mvmt);
+                    if let Err(AnimationSelectError::NotFound) =
+                        player.intercept_anim(if check_input(current_input, Input::ATTACK) {
+                            "attack"
+                        } else {
+                            "move"
+                        })
+                    {
+                        panic!("No animation found");
+                    }
+                }
+    
+    
+                for (_, background_object) in background.iter_mut() {
+                    background_object.draw(graphics, &self.camera);
+                }
+    
+                for (_, entity) in entities.iter_mut() {
+                    entity.draw(graphics, &self.camera);
+                }
+            }
+
+        }
         helper.request_redraw();
     }
     fn on_key_down(
@@ -98,7 +101,6 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
         scancode: speedy2d::window::KeyScancode,
     ) {
         if let Some(virtual_key_code) = virtual_key_code {
-            let player = self.entities.get_mut("player");
             match virtual_key_code {
                 VirtualKeyCode::Escape => {
                     self.new_screen = Some(Box::new(TitleScreen::new()));
@@ -123,43 +125,27 @@ impl<'a> WindowHandler<String> for GameScreen<'a> {
         scancode: speedy2d::window::KeyScancode,
     ) {
         if let Some(virtual_key_code) = virtual_key_code {
-            let player = self.entities.get_mut("player");
-            match virtual_key_code {
-                VirtualKeyCode::Right => {
-                    self.current_input &= !Input::RIGHT;
-                    if let Some(player) = player {
-                        player.remove_anim();
-                    }
-                }
-                VirtualKeyCode::Left => {
-                    self.current_input &= !Input::LEFT;
-                    if let Some(player) = player {
-                        player.remove_anim();
-                    }
-                }
-                VirtualKeyCode::Up => {
-                    self.current_input &= !Input::UP;
-                }
-                VirtualKeyCode::Down => {
-                    self.current_input &= !Input::DOWN;
-                }
-                VirtualKeyCode::Space => {
-                    self.current_input &= !Input::ATTACK;
-                    if let Some(player) = player {
-                        player.remove_anim();
-                    }
-                }
-                _ => (),
+            self.current_input &= !match virtual_key_code {
+                VirtualKeyCode::Right => Input::RIGHT,
+                VirtualKeyCode::Left => Input::LEFT,
+                VirtualKeyCode::Up => Input::UP,
+                VirtualKeyCode::Down => Input::DOWN,
+                VirtualKeyCode::Space => Input::ATTACK,
+                _ => Input::NONE,
             }
         }
     }
-    fn on_resize(&mut self, helper: &mut WindowHelper<String>, size_pixels: speedy2d::dimen::Vector2<u32>) {
+    fn on_resize(
+        &mut self,
+        helper: &mut WindowHelper<String>,
+        size_pixels: speedy2d::dimen::Vector2<u32>,
+    ) {
         self.camera.width = size_pixels.x as f32 / 10.0;
         self.camera.height = size_pixels.y as f32 / 10.0;
     }
 }
 
-impl<'a> Screen for GameScreen<'a> {
+impl Screen for GameScreen {
     fn change_screen(&mut self) -> Option<Box<dyn Screen>> {
         if self.new_screen.is_some() {
             return self.new_screen.take();
@@ -168,14 +154,57 @@ impl<'a> Screen for GameScreen<'a> {
     }
 }
 
-impl<'a> GameScreen<'a> {
-    pub fn new() -> GameScreen<'a> {
+impl GameScreen {
+    pub fn new() -> GameScreen {
         GameScreen {
             new_screen: None,
-            entities: HashMap::new(),
+            entities: None,
+            background: None,
             current_input: Input { bits: 0 },
             camera: Camera::new((0.0, 0.0).into(), 40.0, 50.0),
+            namer: SerialNamer::new(),
         }
+    }
+    fn init_sprites(&mut self, graphics: &mut Graphics2D) {
+        let mut entities: HashMap<String, Box<dyn Entity>> = HashMap::new();
+        let mut background: HashMap<String, Box<dyn Entity>> = HashMap::new();
+
+        entities.insert(
+            "player".to_string(),
+            Box::new(Player::new(
+                graphics
+                    .create_image_from_file_path(
+                        Some(ImageFileFormat::PNG),
+                        ImageSmoothingMode::NearestNeighbor,
+                        ".\\assets\\img\\knight.png",
+                    )
+                    .unwrap(),
+            )),
+        );
+
+        let mut r = rand::thread_rng();
+
+        for i in -10..20 {
+            let display = (r.gen_range(0..4), r.gen_range(0..4));
+
+            background.insert(
+                self.namer.gen_name(),
+                Box::new(Tile::new(
+                    graphics
+                        .create_image_from_file_path(
+                            Some(ImageFileFormat::PNG),
+                            ImageSmoothingMode::NearestNeighbor,
+                            ".\\assets\\img\\tiles.png",
+                        )
+                        .unwrap(),
+                    display,
+                    ((i as f32) * 5.0, -5.0),
+                )),
+            );
+        }
+
+        self.entities = Some(entities);
+        self.background = Some(background);
     }
 }
 

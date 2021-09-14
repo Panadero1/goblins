@@ -4,6 +4,7 @@ use crate::{screen::camera::Camera, utility::animation::AnimationSelectError};
 
 pub mod goblin;
 pub mod player;
+pub mod tile;
 
 pub trait Entity {
     fn draw(&mut self, graphics: &mut Graphics2D, camera: &Camera);
