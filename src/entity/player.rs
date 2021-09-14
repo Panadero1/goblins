@@ -6,11 +6,7 @@ use speedy2d::{
     shape::Rectangle,
 };
 
-use crate::{
-    screen::camera::Camera,
-    utility::animation::{Animation, AnimationSelectError},
-    world::space::GamePos,
-};
+use crate::{screen::{camera::Camera, game::{self, DRAG}}, utility::animation::{Animation, AnimationSelectError}, world::space::GamePos};
 
 use super::Entity;
 
@@ -21,14 +17,16 @@ enum Direction {
 }
 
 pub struct Player<'a> {
-    pos: GamePos,
+    pub pos: GamePos,
     anim: Animation<'a>,
     game_size: (f32, f32),
     direction: Direction,
+    pub velocity: GamePos,
 }
 
 impl<'a> Entity for Player<'a> {
     fn draw(&mut self, graphics: &mut speedy2d::Graphics2D, camera: &Camera) {
+        self.update();
         self.anim.draw(
             graphics,
             Rectangle::from_tuples(
@@ -41,13 +39,7 @@ impl<'a> Entity for Player<'a> {
         );
     }
     fn moove(&mut self, change_pos: (f32, f32)) {
-        self.direction = match change_pos.0.partial_cmp(&0.0) {
-            Some(Ordering::Equal) => self.direction,
-            Some(Ordering::Greater) => Direction::Right,
-            Some(Ordering::Less) => Direction::Left,
-            None => self.direction,
-        };
-        self.pos = (self.pos.x + change_pos.0, self.pos.y + change_pos.1).into();
+        self.velocity = (change_pos.0, change_pos.1).into();
     }
     fn set_anim(&mut self, anim_name: &str) -> Result<(), AnimationSelectError> {
         let anim_name = match anim_name {
@@ -80,6 +72,12 @@ impl<'a> Entity for Player<'a> {
     fn remove_anim(&mut self) {
         self.anim.deselect();
     }
+    fn accelerate(&mut self, vector: GamePos) {
+        self.velocity += vector;
+    }
+    fn get_pos(&self) -> GamePos {
+        self.pos
+    }
 }
 
 impl<'a> Player<'a> {
@@ -103,6 +101,23 @@ impl<'a> Player<'a> {
             anim,
             game_size: (8.0, 10.0),
             direction: Direction::Right,
+            velocity: (0.0, 0.0).into(),
         }
+    }
+    fn update(&mut self) {
+        self.velocity.y += game::GRAVITY;
+        self.velocity *= 1.0 - DRAG;
+        self.pos += self.velocity;
+        if self.pos.y > 0.0 {
+            self.pos.y = 0.0;
+            self.velocity.y = 0.0;
+        }
+
+        self.direction = match self.velocity.x.partial_cmp(&0.0) {
+            Some(Ordering::Equal) => self.direction,
+            Some(Ordering::Greater) => Direction::Right,
+            Some(Ordering::Less) => Direction::Left,
+            None => self.direction,
+        };
     }
 }

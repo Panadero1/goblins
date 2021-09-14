@@ -5,9 +5,10 @@ use crate::world::space::GamePos;
 use super::get_resolution;
 
 pub struct Camera {
-    pos: GamePos,
+    pub pos: GamePos,
     pub width: f32,
     pub height: f32,
+    velocity: GamePos,
 }
 impl Camera {
     pub fn new(pos: (f32, f32), width: f32, height: f32) -> Camera {
@@ -15,6 +16,7 @@ impl Camera {
             pos: pos.into(),
             width,
             height,
+            velocity: (0.0, 0.0).into(),
         }
     }
     pub fn moove(&mut self, change_pos: (f32, f32)) {

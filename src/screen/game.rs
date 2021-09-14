@@ -17,9 +17,15 @@ use speedy2d::{
 
 use crate::{entity::{self, Entity, player::Player, tile::Tile}, utility::{animation::AnimationSelectError, serial_namer::SerialNamer}};
 
-use super::{camera::Camera, title::TitleScreen, RedirectHandler, Screen, RESOLUTION};
+use super::{RESOLUTION, RedirectHandler, Screen, camera::Camera, get_resolution, title::TitleScreen};
 
-const SPEED: f32 = 2.0;
+const SPEED: f32 = 0.15;
+
+const JUMP: f32 = 5.0;
+
+pub const GRAVITY: f32 = 0.2;
+
+pub const DRAG: f32 = 0.1;
 
 bitflags! {
     struct Input: u8 {
@@ -51,25 +57,27 @@ impl WindowHandler<String> for GameScreen {
         if let Some(entities) = &mut self.entities {
             if let Some(background) = &mut self.background {
                 let current_input = self.current_input;
-    
+
                 let player = entities.get_mut("player").unwrap();
     
                 if current_input.is_empty() {
                     player.remove_anim();
                 } else {
-                    let mvmt = if check_input(current_input, Input::LEFT) {
+                    let mut mvmt = if check_input(current_input, Input::LEFT) {
                         (-SPEED, 0.0)
                     } else if check_input(current_input, Input::RIGHT) {
                         (SPEED, 0.0)
                     } else if check_input(current_input, Input::DOWN) {
-                        (0.0, SPEED)
-                    } else if check_input(current_input, Input::UP) {
-                        (0.0, -SPEED)
+                        (0.0, JUMP)
                     } else {
                         (0.0, 0.0)
                     };
-                    player.moove(mvmt);
-                    self.camera.moove(mvmt);
+
+                    if check_input(current_input, Input::UP) && player.get_pos().y == 0.0 {
+                        mvmt.1 = -JUMP;
+                    }
+
+                    player.accelerate(mvmt.into());
                     if let Err(AnimationSelectError::NotFound) =
                         player.intercept_anim(if check_input(current_input, Input::ATTACK) {
                             "attack"
@@ -80,7 +88,9 @@ impl WindowHandler<String> for GameScreen {
                         panic!("No animation found");
                     }
                 }
-    
+
+                // This leads to the camera always being *slightly* behind the player (especially if player is moving fast)
+                self.camera.pos = (player.get_pos().x, 0.0).into();
     
                 for (_, background_object) in background.iter_mut() {
                     background_object.draw(graphics, &self.camera);
@@ -90,7 +100,6 @@ impl WindowHandler<String> for GameScreen {
                     entity.draw(graphics, &self.camera);
                 }
             }
-
         }
         helper.request_redraw();
     }
@@ -107,11 +116,11 @@ impl WindowHandler<String> for GameScreen {
                 }
                 _ => {
                     self.current_input |= match virtual_key_code {
+                        VirtualKeyCode::Left => Input::LEFT,
                         VirtualKeyCode::Up => Input::UP,
                         VirtualKeyCode::Down => Input::DOWN,
                         VirtualKeyCode::Right => Input::RIGHT,
-                        VirtualKeyCode::Left => Input::LEFT,
-                        VirtualKeyCode::Space => Input::ATTACK,
+                        VirtualKeyCode::X => Input::ATTACK,
                         _ => Input::NONE,
                     }
                 }
@@ -130,7 +139,7 @@ impl WindowHandler<String> for GameScreen {
                 VirtualKeyCode::Left => Input::LEFT,
                 VirtualKeyCode::Up => Input::UP,
                 VirtualKeyCode::Down => Input::DOWN,
-                VirtualKeyCode::Space => Input::ATTACK,
+                VirtualKeyCode::X => Input::ATTACK,
                 _ => Input::NONE,
             }
         }
@@ -156,12 +165,13 @@ impl Screen for GameScreen {
 
 impl GameScreen {
     pub fn new() -> GameScreen {
+        let res = get_resolution();
         GameScreen {
             new_screen: None,
             entities: None,
             background: None,
             current_input: Input { bits: 0 },
-            camera: Camera::new((0.0, 0.0).into(), 40.0, 50.0),
+            camera: Camera::new((0.0, 0.0).into(), res.0 as f32 / 10.0, res.1 as f32 / 10.0),
             namer: SerialNamer::new(),
         }
     }
@@ -198,7 +208,7 @@ impl GameScreen {
                         )
                         .unwrap(),
                     display,
-                    ((i as f32) * 5.0, -5.0),
+                    ((i as f32) * 5.0, 10.0),
                 )),
             );
         }

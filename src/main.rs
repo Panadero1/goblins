@@ -2,7 +2,6 @@
 // [Next]
 // - Generate ground
 // - Physics
-// -- Jump
 // -- Colliding
 // -- Hitboxes
 // [Backlog]

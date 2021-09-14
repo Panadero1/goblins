@@ -48,7 +48,10 @@ impl<'a> Entity for Tile<'a> {
     fn intercept_anim(&mut self, anim_name: &str) -> Result<(), AnimationSelectError> {
         Ok(())
     }
-    fn remove_anim(&mut self) {
+    fn remove_anim(&mut self) {}
+    fn accelerate(&mut self, vector: GamePos) {}
+    fn get_pos(&self) -> GamePos {
+        self.pos
     }
 }
 
