@@ -2,11 +2,19 @@ use std::{cmp::Ordering, collections::HashMap};
 
 use speedy2d::{
     color::Color,
-    image::{ImageDataType, ImageFileFormat, ImageHandle},
+    image::{ImageDataType, ImageFileFormat, ImageHandle, ImageSmoothingMode},
     shape::Rectangle,
+    Graphics2D,
 };
 
-use crate::{screen::{camera::Camera, game::{self, DRAG}}, utility::animation::{Animation, AnimationSelectError}, world::space::GamePos};
+use crate::{
+    screen::{
+        camera::Camera,
+        game::{self, DRAG},
+    },
+    utility::animation::{Animation, AnimationSelectError},
+    world::space::GamePos,
+};
 
 use super::Entity;
 
@@ -81,7 +89,15 @@ impl<'a> Entity for Player<'a> {
 }
 
 impl<'a> Player<'a> {
-    pub fn new(src: ImageHandle) -> Player<'a> {
+    pub fn new(graphics: &mut Graphics2D) -> Player<'a> {
+        let src = graphics
+            .create_image_from_file_path(
+                Some(ImageFileFormat::PNG),
+                ImageSmoothingMode::NearestNeighbor,
+                ".\\assets\\img\\knight.png",
+            )
+            .unwrap();
+
         let mut frames: HashMap<&'a str, (bool, Vec<(u16, u16)>)> = HashMap::new();
 
         frames.insert(

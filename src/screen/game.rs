@@ -1,10 +1,5 @@
 use core::panic;
-use std::{
-    collections::{HashMap, HashSet},
-    rc::Weak,
-    sync::atomic::Ordering,
-    time::Instant,
-};
+use std::{cmp::Ordering, collections::{HashMap, HashSet}, ops::Sub, rc::Weak, time::Instant};
 
 use bitflags::bitflags;
 use rand::Rng;
@@ -15,9 +10,11 @@ use speedy2d::{
     Graphics2D,
 };
 
-use crate::{entity::{self, Entity, player::Player, tile::Tile}, utility::{animation::AnimationSelectError, serial_namer::SerialNamer}};
+use crate::{entity::{self, Entity, goblin::Goblin, player::Player, tile::Tile}, utility::{animation::AnimationSelectError, serial_namer::SerialNamer}, world::space::GamePos};
 
-use super::{RESOLUTION, RedirectHandler, Screen, camera::Camera, get_resolution, title::TitleScreen};
+use super::{
+    camera::Camera, get_resolution, title::TitleScreen, RedirectHandler, Screen, RESOLUTION,
+};
 
 const SPEED: f32 = 0.15;
 
@@ -55,47 +52,67 @@ impl WindowHandler<String> for GameScreen {
         }
 
         if let Some(entities) = &mut self.entities {
+            let mut player_pos: GamePos;
             if let Some(background) = &mut self.background {
-                let current_input = self.current_input;
-
-                let player = entities.get_mut("player").unwrap();
+                {
+                    let current_input = self.current_input;
     
-                if current_input.is_empty() {
-                    player.remove_anim();
-                } else {
-                    let mut mvmt = if check_input(current_input, Input::LEFT) {
-                        (-SPEED, 0.0)
-                    } else if check_input(current_input, Input::RIGHT) {
-                        (SPEED, 0.0)
-                    } else if check_input(current_input, Input::DOWN) {
-                        (0.0, JUMP)
+                    let player = entities.get_mut("player").unwrap();
+
+                    player_pos = player.get_pos();
+    
+                    if current_input.is_empty() {
+                        player.remove_anim();
                     } else {
-                        (0.0, 0.0)
-                    };
-
-                    if check_input(current_input, Input::UP) && player.get_pos().y == 0.0 {
-                        mvmt.1 = -JUMP;
-                    }
-
-                    player.accelerate(mvmt.into());
-                    if let Err(AnimationSelectError::NotFound) =
-                        player.intercept_anim(if check_input(current_input, Input::ATTACK) {
-                            "attack"
+                        let mut mvmt = if check_input(current_input, Input::LEFT) {
+                            (-SPEED, 0.0)
+                        } else if check_input(current_input, Input::RIGHT) {
+                            (SPEED, 0.0)
+                        } else if check_input(current_input, Input::DOWN) {
+                            (0.0, JUMP)
                         } else {
-                            "move"
-                        })
-                    {
-                        panic!("No animation found");
+                            (0.0, 0.0)
+                        };
+    
+                        if check_input(current_input, Input::UP) && player.get_pos().y == 0.0 {
+                            mvmt.1 = -JUMP;
+                        }
+    
+                        player.accelerate(mvmt.into());
+                        if let Err(AnimationSelectError::NotFound) =
+                            player.intercept_anim(if check_input(current_input, Input::ATTACK) {
+                                "attack"
+                            } else {
+                                "move"
+                            })
+                        {
+                            panic!("No animation found");
+                        }
                     }
+                    // This leads to the camera always being *slightly* behind the player (especially if player is moving fast)
+                    // Not too much of a problem tho and a pretty nice effect actually
+                    self.camera.pos = (player.get_pos().x, 0.0).into();
                 }
 
-                // This leads to the camera always being *slightly* behind the player (especially if player is moving fast)
-                self.camera.pos = (player.get_pos().x, 0.0).into();
-    
+                {
+                    let mut my_goblin = entities.get_mut("goblin").unwrap();
+
+                    let player_dist = my_goblin.get_pos().sub(player_pos);
+
+                    let direction = (match player_dist.x.partial_cmp(&0.0) {
+                        Some(Ordering::Greater) => -0.5,
+                        Some(Ordering::Less) => 0.5,
+                        _ => 0.0,
+                    }, 0.0).into();
+
+                    my_goblin.accelerate(direction);
+                }
+
+
                 for (_, background_object) in background.iter_mut() {
                     background_object.draw(graphics, &self.camera);
                 }
-    
+
                 for (_, entity) in entities.iter_mut() {
                     entity.draw(graphics, &self.camera);
                 }
@@ -179,18 +196,8 @@ impl GameScreen {
         let mut entities: HashMap<String, Box<dyn Entity>> = HashMap::new();
         let mut background: HashMap<String, Box<dyn Entity>> = HashMap::new();
 
-        entities.insert(
-            "player".to_string(),
-            Box::new(Player::new(
-                graphics
-                    .create_image_from_file_path(
-                        Some(ImageFileFormat::PNG),
-                        ImageSmoothingMode::NearestNeighbor,
-                        ".\\assets\\img\\knight.png",
-                    )
-                    .unwrap(),
-            )),
-        );
+        entities.insert("player".to_string(), Box::new(Player::new(graphics)));
+        entities.insert("goblin".to_string(), Box::new(Goblin::new(graphics)));
 
         let mut r = rand::thread_rng();
 
@@ -199,17 +206,7 @@ impl GameScreen {
 
             background.insert(
                 self.namer.gen_name(),
-                Box::new(Tile::new(
-                    graphics
-                        .create_image_from_file_path(
-                            Some(ImageFileFormat::PNG),
-                            ImageSmoothingMode::NearestNeighbor,
-                            ".\\assets\\img\\tiles.png",
-                        )
-                        .unwrap(),
-                    display,
-                    ((i as f32) * 5.0, 10.0),
-                )),
+                Box::new(Tile::new(graphics, display, ((i as f32) * 5.0, 10.0))),
             );
         }
 

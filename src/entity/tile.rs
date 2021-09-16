@@ -1,10 +1,6 @@
 use std::{cmp::Ordering, collections::HashMap};
 
-use speedy2d::{
-    color::Color,
-    image::{ImageDataType, ImageFileFormat, ImageHandle},
-    shape::Rectangle,
-};
+use speedy2d::{Graphics2D, color::Color, image::{ImageDataType, ImageFileFormat, ImageHandle, ImageSmoothingMode}, shape::Rectangle};
 
 use crate::{
     screen::camera::Camera,
@@ -56,7 +52,14 @@ impl<'a> Entity for Tile<'a> {
 }
 
 impl<'a> Tile<'a> {
-    pub fn new(src: ImageHandle, display: (u16, u16), pos: (f32, f32)) -> Tile<'a> {
+    pub fn new(graphics: &mut Graphics2D, display: (u16, u16), pos: (f32, f32)) -> Tile<'a> {
+        let src = graphics
+            .create_image_from_file_path(
+                Some(ImageFileFormat::PNG),
+                ImageSmoothingMode::NearestNeighbor,
+                ".\\assets\\img\\tiles.png",
+            )
+            .unwrap();
         let anim = Animation::new(src, (5, 5), HashMap::new(), display, 100);
         Tile {
             pos: pos.into(),
