@@ -6,7 +6,12 @@ use crate::{screen::{camera::Camera, game::{self, DRAG}}, utility::animation::{A
 
 use super::Entity;
 
+// Consts
+
+const SPEED: f32 = 0.1;
+
 #[derive(Clone, Copy)]
+
 enum Direction {
     Left,
     Right,
@@ -69,7 +74,7 @@ impl<'a> Entity for Goblin<'a> {
         self.anim.deselect();
     }
     fn accelerate(&mut self, vector: GamePos) {
-        self.velocity += vector;
+        self.velocity += vector * SPEED;
     }
     fn get_pos(&self) -> GamePos {
         self.pos
@@ -117,5 +122,13 @@ impl<'a> Goblin<'a> {
             Some(Ordering::Less) => Direction::Left,
             None => self.direction,
         };
+        if self.velocity.x.abs() < 0.01 {
+            self.remove_anim();
+        }
+        else {
+            if let Err(AnimationSelectError::NotFound) = self.intercept_anim("move") {
+                panic!("Animation not found");
+            }
+        }
     }
 }

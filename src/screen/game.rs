@@ -1,5 +1,11 @@
 use core::panic;
-use std::{cmp::Ordering, collections::{HashMap, HashSet}, ops::Sub, rc::Weak, time::Instant};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    ops::Sub,
+    rc::Weak,
+    time::Instant,
+};
 
 use bitflags::bitflags;
 use rand::Rng;
@@ -10,15 +16,17 @@ use speedy2d::{
     Graphics2D,
 };
 
-use crate::{entity::{self, Entity, goblin::Goblin, player::Player, tile::Tile}, utility::{animation::AnimationSelectError, serial_namer::SerialNamer}, world::space::GamePos};
+use crate::{
+    entity::{self, goblin::Goblin, player::Player, tile::Tile, Entity},
+    utility::{animation::AnimationSelectError, serial_namer::SerialNamer},
+    world::space::GamePos,
+};
 
 use super::{
     camera::Camera, get_resolution, title::TitleScreen, RedirectHandler, Screen, RESOLUTION,
 };
 
-const SPEED: f32 = 0.15;
-
-const JUMP: f32 = 5.0;
+const JUMP: f32 = 25.0;
 
 pub const GRAVITY: f32 = 0.2;
 
@@ -56,28 +64,28 @@ impl WindowHandler<String> for GameScreen {
             if let Some(background) = &mut self.background {
                 {
                     let current_input = self.current_input;
-    
+
                     let player = entities.get_mut("player").unwrap();
 
                     player_pos = player.get_pos();
-    
+
                     if current_input.is_empty() {
                         player.remove_anim();
                     } else {
                         let mut mvmt = if check_input(current_input, Input::LEFT) {
-                            (-SPEED, 0.0)
+                            (-1.0, 0.0)
                         } else if check_input(current_input, Input::RIGHT) {
-                            (SPEED, 0.0)
+                            (1.0, 0.0)
                         } else if check_input(current_input, Input::DOWN) {
                             (0.0, JUMP)
                         } else {
                             (0.0, 0.0)
                         };
-    
+
                         if check_input(current_input, Input::UP) && player.get_pos().y == 0.0 {
                             mvmt.1 = -JUMP;
                         }
-    
+
                         player.accelerate(mvmt.into());
                         if let Err(AnimationSelectError::NotFound) =
                             player.intercept_anim(if check_input(current_input, Input::ATTACK) {
@@ -95,19 +103,24 @@ impl WindowHandler<String> for GameScreen {
                 }
 
                 {
-                    let mut my_goblin = entities.get_mut("goblin").unwrap();
+                    let goblin = entities.get_mut("goblin").unwrap();
 
-                    let player_dist = my_goblin.get_pos().sub(player_pos);
+                    let player_dist = goblin.get_pos().sub(player_pos);
 
-                    let direction = (match player_dist.x.partial_cmp(&0.0) {
-                        Some(Ordering::Greater) => -0.5,
-                        Some(Ordering::Less) => 0.5,
-                        _ => 0.0,
-                    }, 0.0).into();
+                    let direction = (
+                        if player_dist.x > 1.0 {
+                            -1.0
+                        } else if player_dist.x < -1.0 {
+                            1.0
+                        } else {
+                            0.0
+                        },
+                        0.0,
+                    )
+                        .into();
 
-                    my_goblin.accelerate(direction);
+                    goblin.accelerate(direction);
                 }
-
 
                 for (_, background_object) in background.iter_mut() {
                     background_object.draw(graphics, &self.camera);

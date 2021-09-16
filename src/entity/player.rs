@@ -18,6 +18,10 @@ use crate::{
 
 use super::Entity;
 
+// Consts
+
+const SPEED: f32 = 0.2;
+
 #[derive(Clone, Copy)]
 enum Direction {
     Left,
@@ -81,7 +85,7 @@ impl<'a> Entity for Player<'a> {
         self.anim.deselect();
     }
     fn accelerate(&mut self, vector: GamePos) {
-        self.velocity += vector;
+        self.velocity += vector * SPEED;
     }
     fn get_pos(&self) -> GamePos {
         self.pos
