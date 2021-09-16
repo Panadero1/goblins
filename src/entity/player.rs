@@ -28,15 +28,15 @@ enum Direction {
     Right,
 }
 
-pub struct Player<'a> {
+pub struct Player {
     pub pos: GamePos,
-    anim: Animation<'a>,
+    anim: Animation,
     game_size: (f32, f32),
     direction: Direction,
     pub velocity: GamePos,
 }
 
-impl<'a> Entity for Player<'a> {
+impl Entity for Player {
     fn draw(&mut self, graphics: &mut speedy2d::Graphics2D, camera: &Camera) {
         self.update();
         self.anim.draw(
@@ -92,8 +92,8 @@ impl<'a> Entity for Player<'a> {
     }
 }
 
-impl<'a> Player<'a> {
-    pub fn new(graphics: &mut Graphics2D) -> Player<'a> {
+impl Player {
+    pub fn new(graphics: &mut Graphics2D) -> Player {
         let src = graphics
             .create_image_from_file_path(
                 Some(ImageFileFormat::PNG),
@@ -102,7 +102,7 @@ impl<'a> Player<'a> {
             )
             .unwrap();
 
-        let mut frames: HashMap<&'a str, (bool, Vec<(u16, u16)>)> = HashMap::new();
+        let mut frames: HashMap<&'static str, (bool, Vec<(u16, u16)>)> = HashMap::new();
 
         frames.insert(
             "attack right",

@@ -1,11 +1,5 @@
 use core::panic;
-use std::{
-    cmp::Ordering,
-    collections::{HashMap, HashSet},
-    ops::Sub,
-    rc::Weak,
-    time::Instant,
-};
+use std::{cmp::Ordering, collections::{HashMap, HashSet}, ops::Sub, rc::Weak, time::{Duration, Instant}};
 
 use bitflags::bitflags;
 use rand::Rng;
@@ -26,7 +20,7 @@ use super::{
     camera::Camera, get_resolution, title::TitleScreen, RedirectHandler, Screen, RESOLUTION,
 };
 
-const JUMP: f32 = 25.0;
+const JUMP: f32 = 23.0;
 
 pub const GRAVITY: f32 = 0.2;
 
@@ -46,26 +40,28 @@ bitflags! {
 pub struct GameScreen {
     new_screen: Option<Box<dyn Screen>>,
     background: Option<HashMap<String, Box<dyn Entity>>>,
-    entities: Option<HashMap<String, Box<dyn Entity>>>,
+    player: Option<Player>,
+    goblins: Vec<Goblin>,
     current_input: Input,
     camera: Camera,
     namer: SerialNamer,
+    start: Instant,
+    spawn_interval_ms: u16,
 }
 
 impl WindowHandler<String> for GameScreen {
     fn on_draw(&mut self, helper: &mut WindowHelper<String>, graphics: &mut Graphics2D) {
         graphics.clear_screen(Color::CYAN);
-        if self.entities.is_none() {
+        if self.player.is_none() {
             self.init_sprites(graphics);
         }
+        self.process_timer(graphics);
 
-        if let Some(entities) = &mut self.entities {
-            let mut player_pos: GamePos;
+        if let Some(player) = &mut self.player {
+            let player_pos: GamePos;
             if let Some(background) = &mut self.background {
                 {
                     let current_input = self.current_input;
-
-                    let player = entities.get_mut("player").unwrap();
 
                     player_pos = player.get_pos();
 
@@ -103,32 +99,32 @@ impl WindowHandler<String> for GameScreen {
                 }
 
                 {
-                    let goblin = entities.get_mut("goblin").unwrap();
+                    for goblin in self.goblins.iter_mut() {
+                        let player_dist = goblin.get_pos().sub(player_pos);
 
-                    let player_dist = goblin.get_pos().sub(player_pos);
+                        let direction = (
+                            if player_dist.x > 1.0 {
+                                -1.0
+                            } else if player_dist.x < -1.0 {
+                                1.0
+                            } else {
+                                0.0
+                            },
+                            0.0,
+                        )
+                            .into();
+    
+                        goblin.accelerate(direction);
+                        goblin.draw(graphics, &self.camera);
+                    }
 
-                    let direction = (
-                        if player_dist.x > 1.0 {
-                            -1.0
-                        } else if player_dist.x < -1.0 {
-                            1.0
-                        } else {
-                            0.0
-                        },
-                        0.0,
-                    )
-                        .into();
-
-                    goblin.accelerate(direction);
                 }
 
                 for (_, background_object) in background.iter_mut() {
                     background_object.draw(graphics, &self.camera);
                 }
 
-                for (_, entity) in entities.iter_mut() {
-                    entity.draw(graphics, &self.camera);
-                }
+                player.draw(graphics, &self.camera);
             }
         }
         helper.request_redraw();
@@ -198,19 +194,19 @@ impl GameScreen {
         let res = get_resolution();
         GameScreen {
             new_screen: None,
-            entities: None,
+            player: None,
             background: None,
             current_input: Input { bits: 0 },
             camera: Camera::new((0.0, 0.0).into(), res.0 as f32 / 10.0, res.1 as f32 / 10.0),
             namer: SerialNamer::new(),
+            goblins: Vec::new(),
+            start: Instant::now(),
+            spawn_interval_ms: 10_000,
         }
     }
     fn init_sprites(&mut self, graphics: &mut Graphics2D) {
-        let mut entities: HashMap<String, Box<dyn Entity>> = HashMap::new();
         let mut background: HashMap<String, Box<dyn Entity>> = HashMap::new();
-
-        entities.insert("player".to_string(), Box::new(Player::new(graphics)));
-        entities.insert("goblin".to_string(), Box::new(Goblin::new(graphics)));
+        
 
         let mut r = rand::thread_rng();
 
@@ -223,8 +219,16 @@ impl GameScreen {
             );
         }
 
-        self.entities = Some(entities);
+        self.player = Some(Player::new(graphics));
         self.background = Some(background);
+    }
+    fn process_timer(&mut self, graphics: &mut Graphics2D) {
+        let time_elspased = self.start.elapsed().as_millis();
+        if time_elspased > self.spawn_interval_ms as u128 {
+            self.goblins.push(Goblin::new(graphics));
+
+            self.start = Instant::now().sub(Duration::from_millis((time_elspased - self.spawn_interval_ms as u128) as u64));
+        }
     }
 }
 

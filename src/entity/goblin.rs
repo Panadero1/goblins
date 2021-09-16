@@ -17,15 +17,15 @@ enum Direction {
     Right,
 }
 
-pub struct Goblin<'a> {
+pub struct Goblin {
     pub pos: GamePos,
-    anim: Animation<'a>,
+    anim: Animation,
     game_size: (f32, f32),
     direction: Direction,
     pub velocity: GamePos,
 }
 
-impl<'a> Entity for Goblin<'a> {
+impl Entity for Goblin {
     fn draw(&mut self, graphics: &mut speedy2d::Graphics2D, camera: &Camera) {
         self.update();
         self.anim.draw(
@@ -81,11 +81,11 @@ impl<'a> Entity for Goblin<'a> {
     }
 }
 
-impl<'a> Goblin<'a> {
-    pub fn new(graphics: &mut Graphics2D) -> Goblin<'a> {
+impl Goblin {
+    pub fn new(graphics: &mut Graphics2D) -> Goblin {
         let src = graphics.create_image_from_file_path(Some(ImageFileFormat::PNG), ImageSmoothingMode::NearestNeighbor, ".\\assets\\img\\goblin.png").unwrap();
 
-        let mut frames: HashMap<&'a str, (bool, Vec<(u16, u16)>)> = HashMap::new();
+        let mut frames: HashMap<&'static str, (bool, Vec<(u16, u16)>)> = HashMap::new();
 
         frames.insert(
             "attack right",

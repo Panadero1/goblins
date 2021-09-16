@@ -13,23 +13,23 @@ pub enum AnimationSelectError {
     NotFound,
 }
 
-pub struct Animation<'a> {
+pub struct Animation {
     src: ImageHandle,
     frame_size: (u16, u16),
-    frames: HashMap<&'a str, (bool, Vec<(u16, u16)>)>,
+    frames: HashMap<&'static str, (bool, Vec<(u16, u16)>)>,
     default: (u16, u16),
     frame_loop: Option<(bool, Vec<(u16, u16)>)>,
     start: Instant,
     iter_speed_ms: u16,
 }
-impl<'a> Animation<'a> {
+impl Animation {
     pub fn new(
         src: ImageHandle,
         frame_size: (u16, u16),
-        frames: HashMap<&'a str, (bool, Vec<(u16, u16)>)>,
+        frames: HashMap<&'static str, (bool, Vec<(u16, u16)>)>,
         default: (u16, u16),
         iter_speed_ms: u16,
-    ) -> Animation<'a> {
+    ) -> Animation {
         Animation {
             src,
             frame_size,

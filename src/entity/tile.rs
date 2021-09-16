@@ -16,13 +16,13 @@ enum Direction {
     Right,
 }
 
-pub struct Tile<'a> {
+pub struct Tile {
     pos: GamePos,
-    anim: Animation<'a>,
+    anim: Animation,
     game_size: (f32, f32),
 }
 
-impl<'a> Entity for Tile<'a> {
+impl Entity for Tile {
     fn draw(&mut self, graphics: &mut speedy2d::Graphics2D, camera: &Camera) {
         self.anim.draw(
             graphics,
@@ -51,8 +51,8 @@ impl<'a> Entity for Tile<'a> {
     }
 }
 
-impl<'a> Tile<'a> {
-    pub fn new(graphics: &mut Graphics2D, display: (u16, u16), pos: (f32, f32)) -> Tile<'a> {
+impl Tile {
+    pub fn new(graphics: &mut Graphics2D, display: (u16, u16), pos: (f32, f32)) -> Tile {
         let src = graphics
             .create_image_from_file_path(
                 Some(ImageFileFormat::PNG),
