@@ -1,0 +1,49 @@
+# TODO list
+[Next]
+
+[[Next.Item]]
+Title = "Restructure game.rs"
+Desc = """
+Move large chunks of code out of on_draw into separate functions
+The whole thing is getting cluttered"""
+
+[[Next.Item]]
+Title = "Hitboxes"
+Desc = """
+Add checking for hitbox rectangles"""
+
+[[Next.Item]]
+Title = "Add border to sprite sheets"
+Desc = """
+Sprite sheets are annoying and frames are bleeding into each other
+Add a 1px border of whatever default color is relevant to the frame in sprite sheets
+Add functionality in crate::utility::animation::Animation to fix this"""
+
+[[Next.Item]]
+Title = "Damage & health"
+Desc = """
+Goblins are able to hit the player and reduce their health
+Player is able to hit goblins and reduce their health"""
+
+[[Next.Item]]
+Title = "Goblin spacing"
+Desc = """
+Goblins currently all clump up into one giant ball
+Hard to discern between them
+Make them space themselves out
+Perhaps have this work with the hitbox item"""
+
+[Backlog]
+
+[[Backlog.Item]]
+Title = "Add closure for button position, given center"
+Desc = """
+Improve functionality of crate::ui::button::Button to allow for a closure that ...
+...repositions it based on the coordinates of the center of the screen
+This helps with ease of adding new buttons"""
+
+[[Backlog.Item]]
+Title = "Obliterate the warnings"
+Desc = """
+We currently have 59 warnings and counting
+When finished with all other things, go through and remove them all"""
