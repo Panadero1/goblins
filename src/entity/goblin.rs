@@ -1,8 +1,20 @@
 use std::{cmp::Ordering, collections::HashMap};
 
-use speedy2d::{Graphics2D, color::Color, image::{ImageDataType, ImageFileFormat, ImageHandle, ImageSmoothingMode}, shape::Rectangle};
+use speedy2d::{
+    color::Color,
+    image::{ImageDataType, ImageFileFormat, ImageHandle, ImageSmoothingMode},
+    shape::Rectangle,
+    Graphics2D,
+};
 
-use crate::{screen::{camera::Camera, game::{self, DRAG}}, utility::animation::{Animation, AnimationSelectError}, world::space::GamePos};
+use crate::{
+    screen::{
+        camera::Camera,
+        game::{self, DRAG},
+    },
+    utility::animation::{Animation, AnimationSelectError},
+    world::space::GamePos,
+};
 
 use super::Entity;
 
@@ -10,8 +22,7 @@ use super::Entity;
 
 const SPEED: f32 = 0.1;
 
-#[derive(Clone, Copy)]
-
+#[derive(Clone, Copy, Debug)]
 enum Direction {
     Left,
     Right,
@@ -23,6 +34,7 @@ pub struct Goblin {
     game_size: (f32, f32),
     direction: Direction,
     pub velocity: GamePos,
+    pub attacking: bool,
 }
 
 impl Entity for Goblin {
@@ -43,32 +55,12 @@ impl Entity for Goblin {
         self.velocity = (change_pos.0, change_pos.1).into();
     }
     fn set_anim(&mut self, anim_name: &str) -> Result<(), AnimationSelectError> {
-        let anim_name = match anim_name {
-            "move" => match self.direction {
-                Direction::Left => "move left",
-                Direction::Right => "move right",
-            },
-            "attack" => match self.direction {
-                Direction::Left => "attack left",
-                Direction::Right => "attack right",
-            },
-            _ => return Err(AnimationSelectError::NotFound),
-        };
-        self.anim.select(anim_name)
+        self.anim.select(&self.map_animation(anim_name)[..])
     }
     fn intercept_anim(&mut self, anim_name: &str) -> Result<(), AnimationSelectError> {
-        let anim_name = match anim_name {
-            "move" => match self.direction {
-                Direction::Left => "move left",
-                Direction::Right => "move right",
-            },
-            "attack" => match self.direction {
-                Direction::Left => "attack left",
-                Direction::Right => "attack right",
-            },
-            _ => return Err(AnimationSelectError::NotFound),
-        };
-        self.anim.intercept(anim_name)
+        // println!("{}", anim_name);
+        self.anim.intercept(&self.map_animation(anim_name)[..])
+
     }
     fn remove_anim(&mut self) {
         self.anim.deselect();
@@ -83,9 +75,15 @@ impl Entity for Goblin {
 
 impl Goblin {
     pub fn new(graphics: &mut Graphics2D) -> Goblin {
-        let src = graphics.create_image_from_file_path(Some(ImageFileFormat::PNG), ImageSmoothingMode::NearestNeighbor, ".\\assets\\img\\goblin.png").unwrap();
+        let src = graphics
+            .create_image_from_file_path(
+                Some(ImageFileFormat::PNG),
+                ImageSmoothingMode::NearestNeighbor,
+                ".\\assets\\img\\goblin.png",
+            )
+            .unwrap();
 
-        let mut frames: HashMap<&'static str, (bool, Vec<(u16, u16)>)> = HashMap::new();
+        let mut frames: HashMap<&'static str, (bool, Vec<(u16, u16)>)> = HashMap::with_capacity(8);
 
         frames.insert(
             "attack right",
@@ -95,8 +93,12 @@ impl Goblin {
             "attack left",
             (true, vec![(0, 2), (1, 2), (2, 2), (3, 2), (4, 2)]),
         );
-        frames.insert("move left", (true, vec![(0, 1), (1, 1), (2, 1), (3, 1)]));
         frames.insert("move right", (true, vec![(0, 0), (1, 0), (2, 0), (3, 0)]));
+        frames.insert("move left", (true, vec![(0, 1), (1, 1), (2, 1), (3, 1)]));
+        frames.insert("idle right", (true, vec![(0, 0)]));
+        frames.insert("idle left", (true, vec![(0, 1)]));
+        frames.insert("attack right", (false, vec![(0, 2), (1, 2), (2, 2), (3, 2)]));
+        frames.insert("attack left", (false, vec![(0, 3), (1, 3), (2, 3), (3, 3)]));
 
         let anim = Animation::new(src, (10, 10), frames, (0, 0), 100);
         Goblin {
@@ -105,6 +107,7 @@ impl Goblin {
             game_size: (10.0, 10.0),
             direction: Direction::Right,
             velocity: (0.0, 0.0).into(),
+            attacking: false,
         }
     }
     fn update(&mut self) {
@@ -122,13 +125,22 @@ impl Goblin {
             Some(Ordering::Less) => Direction::Left,
             None => self.direction,
         };
-        if self.velocity.x.abs() < 0.01 {
-            self.remove_anim();
+        if self.anim.frame_loop.is_none() {
+            self.attacking = false;
         }
-        else {
-            if let Err(AnimationSelectError::NotFound) = self.intercept_anim("move") {
-                panic!("Animation not found");
-            }
+        if let Err(AnimationSelectError::NotFound) =
+            self.set_anim(if self.attacking {
+                "attack"
+            } else if self.velocity.x.abs() < 0.01 {
+                "idle"
+            } else {
+                "move"
+            })
+        {
+            panic!("Animation not found..");
         }
+    }
+    fn map_animation(&self, anim_name: &str) -> String {
+        format!("{} {}", anim_name, match self.direction {Direction::Left => "left", Direction::Right => "right"})
     }
 }

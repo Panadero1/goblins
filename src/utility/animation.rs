@@ -18,7 +18,7 @@ pub struct Animation {
     frame_size: (u16, u16),
     frames: HashMap<&'static str, (bool, Vec<(u16, u16)>)>,
     default: (u16, u16),
-    frame_loop: Option<(bool, Vec<(u16, u16)>)>,
+    pub frame_loop: Option<(bool, Vec<(u16, u16)>)>,
     start: Instant,
     iter_speed_ms: u16,
 }

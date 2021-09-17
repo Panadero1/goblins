@@ -1,24 +1,25 @@
 use core::panic;
-use std::{cmp::Ordering, collections::{HashMap, HashSet}, ops::Sub, rc::Weak, time::{Duration, Instant}};
+use std::{collections::{HashMap}, ops::Sub, time::{Duration, Instant}};
 
 use bitflags::bitflags;
 use rand::Rng;
 use speedy2d::{
     color::Color,
-    image::{ImageDataType, ImageFileFormat, ImageSmoothingMode},
     window::{VirtualKeyCode, WindowHandler, WindowHelper},
     Graphics2D,
 };
 
 use crate::{
-    entity::{self, goblin::Goblin, player::Player, tile::Tile, Entity},
+    entity::{goblin::Goblin, player::Player, tile::Tile, Entity},
     utility::{animation::AnimationSelectError, serial_namer::SerialNamer},
     world::space::GamePos,
 };
 
 use super::{
-    camera::Camera, get_resolution, title::TitleScreen, RedirectHandler, Screen, RESOLUTION,
+    camera::Camera, get_resolution, title::TitleScreen, Screen,
 };
+
+const GOBLIN_ATTACK_DIST: f32 = 5.0;
 
 const JUMP: f32 = 23.0;
 
@@ -103,11 +104,17 @@ impl WindowHandler<String> for GameScreen {
                         let player_dist = goblin.get_pos().sub(player_pos);
 
                         let direction = (
-                            if player_dist.x > 1.0 {
+                            if player_dist.x > GOBLIN_ATTACK_DIST {
                                 -1.0
-                            } else if player_dist.x < -1.0 {
+                            } else if player_dist.x < -GOBLIN_ATTACK_DIST {
                                 1.0
                             } else {
+                                // Within attacking range: play attack animation
+                                if player_dist.magnitude() < GOBLIN_ATTACK_DIST {
+                                    goblin.velocity.x = 0.0;
+                                    goblin.attacking = true;
+                                }
+
                                 0.0
                             },
                             0.0,
@@ -131,9 +138,9 @@ impl WindowHandler<String> for GameScreen {
     }
     fn on_key_down(
         &mut self,
-        helper: &mut WindowHelper<String>,
+        _helper: &mut WindowHelper<String>,
         virtual_key_code: Option<speedy2d::window::VirtualKeyCode>,
-        scancode: speedy2d::window::KeyScancode,
+        _scancode: speedy2d::window::KeyScancode,
     ) {
         if let Some(virtual_key_code) = virtual_key_code {
             match virtual_key_code {
@@ -155,9 +162,9 @@ impl WindowHandler<String> for GameScreen {
     }
     fn on_key_up(
         &mut self,
-        helper: &mut WindowHelper<String>,
+        _helper: &mut WindowHelper<String>,
         virtual_key_code: Option<VirtualKeyCode>,
-        scancode: speedy2d::window::KeyScancode,
+        _scancode: speedy2d::window::KeyScancode,
     ) {
         if let Some(virtual_key_code) = virtual_key_code {
             self.current_input &= !match virtual_key_code {
@@ -172,7 +179,7 @@ impl WindowHandler<String> for GameScreen {
     }
     fn on_resize(
         &mut self,
-        helper: &mut WindowHelper<String>,
+        _helper: &mut WindowHelper<String>,
         size_pixels: speedy2d::dimen::Vector2<u32>,
     ) {
         self.camera.width = size_pixels.x as f32 / 10.0;
@@ -201,7 +208,7 @@ impl GameScreen {
             namer: SerialNamer::new(),
             goblins: Vec::new(),
             start: Instant::now(),
-            spawn_interval_ms: 10_000,
+            spawn_interval_ms: 1_000,
         }
     }
     fn init_sprites(&mut self, graphics: &mut Graphics2D) {
