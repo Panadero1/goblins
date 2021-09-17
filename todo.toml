@@ -47,3 +47,8 @@ Title = "Obliterate the warnings"
 Desc = """
 We currently have 59 warnings and counting
 When finished with all other things, go through and remove them all"""
+
+[[Backlog.Item]]
+Title = "Settings persistence"
+Desc = """
+Be able to persist settings (such as resolution) into a file"""
